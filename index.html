@@ -1,0 +1,1408 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>🗺️🦮우리강지 - 우리의 강서구 지도😘</title>
+    
+    <!-- 로드뷰 관련 CSS -->
+    <style>
+        #container {overflow:hidden;height:78vh;position:relative;}
+        #mapWrapper {width:100%;height:78vh;z-index:1;}
+        #rvWrapper {width:50%;height:78vh;top:0;right:0;position:absolute;z-index:0;}
+        #container.view_roadview #mapWrapper {width: 50%;}
+        #roadviewControl {position:absolute;top:5px;right:5px;width:42px;height:42px;z-index: 1;cursor: pointer; background: url(https://t1.daumcdn.net/localimg/localimages/07/2018/pc/common/img_search.png) 0 -450px no-repeat;}
+        #roadviewControl.active {background-position:0 -350px;}
+        #close {position: absolute;padding: 4px;top: 8px;left: 8px;cursor: pointer;background: #fff;border-radius: 4px;border: 1px solid #c8c8c8;box-shadow: 0px 1px #888;}
+        #close .img {display: block;background: url(https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/rv_close.png) no-repeat;width: 14px;height: 14px;}
+   </style>
+   <!-- 페이지 디자인 -->
+   <style>
+        /* 폰트설정 */
+        @import url("https://fonts.googleapis.com/css2?family=Jua&display=swap");
+        body {
+            font-family: "Jua", sans-serif;
+            /* display: flex; */
+        }
+
+        /* 체크박스 1.5배 키우기 */
+        input[type=checkbox] {
+            zoom: 1.5;
+        }
+        /* 베이지 박스 디자인 */
+        .select_map {
+            padding-top: 1px;
+            padding-bottom: 1px;
+            background-color: beige;
+            text-align: center;
+        }
+
+        /* 베이지 박스 글씨크기  */
+        .select_text {
+            font-size: 20px;
+        }
+
+        /* 동그라미 지우기 버튼 */
+        h3 > button {
+            margin-left: 30px;
+            font-size: 15px;
+            padding: 10px;
+            background-color: darkslategray;
+            color:blanchedalmond;
+        }
+        
+        /* 하단 안내문 글씨크기 */
+        .info_text {
+            margin-top: 10px;
+            margin-bottom: 15px;
+            font-size: 20px;    
+            color: green;
+            text-align: center;
+        }
+
+        /* 좌측상단 카테고리 박스 */
+        .category {
+            height:fit-content; width:fit-content;  background-color:#FFFFF0;  
+            padding-right: 15px;
+            padding-left: 15px;
+            font-size: 16px;
+            position:absolute;
+            top: 15px;
+            left: 15px;
+            z-index:2;
+        }
+
+        /* 우측 상단의 구민, 공무원 관심지역  */
+        .voice {
+            height:fit-content; width:fit-content;  background-color:#EBF9F7;  
+            font-size: 16px;
+            padding-right: 15px;
+            padding-left: 15px;
+            position:absolute;
+            top: 15px;
+            left: 140px;
+            z-index:2;
+        }
+
+        /* CCTV 커서대면 뜨는 메세지 디자인*/
+        .info {
+            position: relative;
+            top: 5px;
+            left: 5px;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+            border-bottom: 2px solid #ddd;
+            font-size: 12px;
+            padding: 5px;
+            background: #fff;
+            list-style: none;
+            margin: 0;
+        }
+        .info:nth-of-type(n) {
+            border: 0;
+            box-shadow: 0px 1px 2px #888;
+        }
+
+        /* 반경 표시 박스 및 숫자텍스트 디자인  */
+        .info .label {
+            display: inline-block;
+            width: 50px;
+        }
+        .number {
+            font-weight: bold;
+            color: #00a0e9;
+        }
+        
+        /* 제안게시판 이동 div 디자인 */
+        .propose {
+            padding: 10px 20px 10px 20px; 
+        }
+
+        .minwon {
+            padding: 5px 15px 5px 15px; 
+            font-size: 15px;
+            text-align: center;
+        }
+
+        .select_a {
+            text-decoration: none;
+            color: blanchedalmond;
+        }
+        
+        .button1 {
+            margin-right: 20px;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- 카카오 관련 코드시작. csv파일에 나와있는 데로, 마커를 찍을 겁니다 -->
+    <script type="text/javascript"
+    src="//dapi.kakao.com/v2/maps/sdk.js?appkey=05326a991fe3d933dbe3ad816698492c&libraries=services&libraries=clusterer"></script>
+
+    <!-- d3를 임포트해서 csv파일을 읽을 겁니다. -->
+    <script type="text/javascript" src="http://d3js.org/d3.v3.min.js"></script>
+    <script>
+        // d3에서 encoding 하는 법을 못 찾아서,
+        // csv파일 자체를 그냥 utf8로 encoding해 주었습니다.
+        var latlongdata
+        var loadDsv = d3.dsv(",", "utf-8");
+        loadDsv("./data/seoulsiru_utf8.csv", function (data) {
+            latlongdata = data
+            console.log(data[0])
+        });
+    </script>
+
+    <!-- 로드뷰 컨테이너 -->
+    <div id="container">
+        <div id="rvWrapper">
+            <div id="roadview" style="width:100%;height:78vh;"></div> <!-- 로드뷰를 표시할 div 입니다 -->
+            <div id="close" title="로드뷰닫기" onclick="closeRoadview()"><span class="img"></span></div>
+        </div>
+        <div id="mapWrapper">
+            <div id="map" style="width:100%;height:100%"></div>
+                <!-- 지도를 표시할 div 입니다 -->
+            <div id="roadviewControl" onclick="setRoadviewRoad()"></div>
+        </div>
+    </div>
+
+   <!-- 클릭하면 위도경도 획득 ID (위치설정) -->
+   <div id="clickLatlng"></div>
+
+    <!-- 베이지 박스 -->
+    <div class="select_map">
+    <h3 class="select_text">
+        <button class="button1" onclick="removeCircles()"><a target="_blank" class="select_a" href = "http://slopemap.gangseo.seoul.kr/slopeMap/citizen.do" >즐겨찾기(표시변경)</a></button>
+        <input type="checkbox" id="chkTerrain" onclick="setOverlayMapTypeId()" /> 지형정보 보기
+        <input type="checkbox" id="chkUseDistrict" onclick="setOverlayMapTypeId()" /> 지적편집도 정보 보기 
+        <input type="checkbox" id="chkTraffic" onclick="setOverlayMapTypeId()" /> 교통정보 보기       
+        <input type="checkbox" id="chkBicycle" onclick="setOverlayMapTypeId()" /> 자전거도로 정보 보기
+        <button onclick="removeCircles()">동그라미 지우기</button>
+    </h3>
+    </div>
+    
+<div class="category">
+    <h4>
+        <input 
+        type='checkbox'
+        name='cctv'
+        value='cctv'
+        checked="on"
+        onclick="cctvButtonClick()"/>
+        CCTV
+    </h4>
+    <h4>
+        <input 
+        type='checkbox'
+        name='gs25'
+        value='gs25'
+        checked="on"
+        onclick="gs25ButtonClick()"/>
+        공사현장
+    </h4>
+    <h4>
+        <input 
+        type='checkbox'
+        name='gs25'
+        value='gs25'
+        checked="on"
+        onclick="gs25ButtonClick()"/>
+        공원
+    </h4>
+    <h4>
+        <input 
+        type='checkbox'
+        name='gs25'
+        checked="on"
+        onclick="gs25ButtonClick()"/>
+        주차장
+    </h4>
+</div>
+
+<div class="voice">
+    <h4>
+        <input 
+        type='checkbox'
+        name='gs25'
+        value='gs25'
+        checked="on"
+        onclick="gs25ButtonClick()"/>
+        최근민원
+    </h4>    
+    <h4>
+        <input 
+        type='checkbox'
+        name='gs25'
+        value='gs25'
+        checked="on"
+        onclick="gs25ButtonClick()"/>
+        강서NOW
+    </h4>    
+    <h4>
+        <input 
+        type='checkbox'
+        name='gs25'
+        value='gs25'
+        checked="on"
+        onclick="gs25ButtonClick()"/>
+        공감수↑
+    </h4>
+    <h4>
+        <input 
+        type='checkbox'
+        name='gs25'
+        value='gs25'
+        checked="on"
+        onclick="gs25ButtonClick()"/>
+        My
+    </h4>
+</div>
+
+<script>
+    // 마커를 클릭했을 때 해당 장소의 상세정보를 보여줄 커스텀오버레이입니다
+    var placeOverlay = new kakao.maps.CustomOverlay({zIndex:1}), 
+        contentNode = document.createElement('div'), // 커스텀 오버레이의 컨텐츠 엘리먼트 입니다 
+        markers = [], // 마커를 담을 배열입니다
+        currCategory = ''; // 현재 선택된 카테고리를 가지고 있을 변수입니다
+     
+    
+    
+    // 장소 검색 객체를 생성합니다
+    var ps = new kakao.maps.services.Places(map); 
+    
+    // 지도에 idle 이벤트를 등록합니다
+    kakao.maps.event.addListener(map, 'idle', searchPlaces);
+    
+    // 커스텀 오버레이의 컨텐츠 노드에 css class를 추가합니다 
+    contentNode.className = 'placeinfo_wrap';
+    
+    // 커스텀 오버레이의 컨텐츠 노드에 mousedown, touchstart 이벤트가 발생했을때
+    // 지도 객체에 이벤트가 전달되지 않도록 이벤트 핸들러로 kakao.maps.event.preventMap 메소드를 등록합니다 
+    addEventHandle(contentNode, 'mousedown', kakao.maps.event.preventMap);
+    addEventHandle(contentNode, 'touchstart', kakao.maps.event.preventMap);
+    
+    // 커스텀 오버레이 컨텐츠를 설정합니다
+    placeOverlay.setContent(contentNode);  
+    
+    // 각 카테고리에 클릭 이벤트를 등록합니다
+    addCategoryClickEvent();
+    
+    // 엘리먼트에 이벤트 핸들러를 등록하는 함수입니다
+    function addEventHandle(target, type, callback) {
+        if (target.addEventListener) {
+            target.addEventListener(type, callback);
+        } else {
+            target.attachEvent('on' + type, callback);
+        }
+    }
+    
+    // 카테고리 검색을 요청하는 함수입니다
+    function searchPlaces() {
+        if (!currCategory) {
+            return;
+        }
+        
+        // 커스텀 오버레이를 숨깁니다 
+        placeOverlay.setMap(null);
+    
+        // 지도에 표시되고 있는 마커를 제거합니다
+        removeMarker();
+        
+        ps.categorySearch(currCategory, placesSearchCB, {useMapBounds:true}); 
+    }
+    
+    // 장소검색이 완료됐을 때 호출되는 콜백함수 입니다
+    function placesSearchCB(data, status, pagination) {
+        if (status === kakao.maps.services.Status.OK) {
+    
+            // 정상적으로 검색이 완료됐으면 지도에 마커를 표출합니다
+            displayPlaces(data);
+        } else if (status === kakao.maps.services.Status.ZERO_RESULT) {
+            // 검색결과가 없는경우 해야할 처리가 있다면 이곳에 작성해 주세요
+    
+        } else if (status === kakao.maps.services.Status.ERROR) {
+            // 에러로 인해 검색결과가 나오지 않은 경우 해야할 처리가 있다면 이곳에 작성해 주세요
+            
+        }
+    }
+    
+    // 지도에 마커를 표출하는 함수입니다
+    function displayPlaces(places) {
+    
+        // 몇번째 카테고리가 선택되어 있는지 얻어옵니다
+        // 이 순서는 스프라이트 이미지에서의 위치를 계산하는데 사용됩니다
+        var order = document.getElementById(currCategory).getAttribute('data-order');
+    
+        
+    
+        for ( var i=0; i<places.length; i++ ) {
+    
+                // 마커를 생성하고 지도에 표시합니다
+                var marker = addMarker(new kakao.maps.LatLng(places[i].y, places[i].x), order);
+    
+                // 마커와 검색결과 항목을 클릭 했을 때
+                // 장소정보를 표출하도록 클릭 이벤트를 등록합니다
+                (function(marker, place) {
+                    kakao.maps.event.addListener(marker, 'click', function() {
+                        displayPlaceInfo(place);
+                    });
+                })(marker, places[i]);
+        }
+    }
+    
+    // 마커를 생성하고 지도 위에 마커를 표시하는 함수입니다
+    function addMarker(position, order) {
+        var imageSrc = 'https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/places_category.png', // 마커 이미지 url, 스프라이트 이미지를 씁니다
+            imageSize = new kakao.maps.Size(27, 28),  // 마커 이미지의 크기
+            imgOptions =  {
+                spriteSize : new kakao.maps.Size(72, 208), // 스프라이트 이미지의 크기
+                spriteOrigin : new kakao.maps.Point(46, (order*36)), // 스프라이트 이미지 중 사용할 영역의 좌상단 좌표
+                offset: new kakao.maps.Point(11, 28) // 마커 좌표에 일치시킬 이미지 내에서의 좌표
+            },
+            markerImage = new kakao.maps.MarkerImage(imageSrc, imageSize, imgOptions),
+                marker = new kakao.maps.Marker({
+                position: position, // 마커의 위치
+                image: markerImage 
+            });
+    
+        marker.setMap(map); // 지도 위에 마커를 표출합니다
+        markers.push(marker);  // 배열에 생성된 마커를 추가합니다
+    
+        return marker;
+    }
+    
+    // 지도 위에 표시되고 있는 마커를 모두 제거합니다
+    function removeMarker() {
+        for ( var i = 0; i < markers.length; i++ ) {
+            markers[i].setMap(null);
+        }   
+        markers = [];
+    }
+    
+    // 클릭한 마커에 대한 장소 상세정보를 커스텀 오버레이로 표시하는 함수입니다
+    function displayPlaceInfo (place) {
+        var content = '<div class="placeinfo">' +
+                        '   <a class="title" href="' + place.place_url + '" target="_blank" title="' + place.place_name + '">' + place.place_name + '</a>';   
+    
+        if (place.road_address_name) {
+            content += '    <span title="' + place.road_address_name + '">' + place.road_address_name + '</span>' +
+                        '  <span class="jibun" title="' + place.address_name + '">(지번 : ' + place.address_name + ')</span>';
+        }  else {
+            content += '    <span title="' + place.address_name + '">' + place.address_name + '</span>';
+        }                
+       
+        content += '    <span class="tel">' + place.phone + '</span>' + 
+                    '</div>' + 
+                    '<div class="after"></div>';
+    
+        contentNode.innerHTML = content;
+        placeOverlay.setPosition(new kakao.maps.LatLng(place.y, place.x));
+        placeOverlay.setMap(map);  
+    }
+    
+    
+    // 각 카테고리에 클릭 이벤트를 등록합니다
+    function addCategoryClickEvent() {
+        var category = document.getElementById('category'),
+            children = category.children;
+    
+        for (var i=0; i<children.length; i++) {
+            children[i].onclick = onClickCategory;
+        }
+    }
+    
+    // 카테고리를 클릭했을 때 호출되는 함수입니다
+    function onClickCategory() {
+        var id = this.id,
+            className = this.className;
+    
+        placeOverlay.setMap(null);
+    
+        if (className === 'on') {
+            currCategory = '';
+            changeCategoryClass();
+            removeMarker();
+        } else {
+            currCategory = id;
+            changeCategoryClass(this);
+            searchPlaces();
+        }
+    }
+    
+    // 클릭된 카테고리에만 클릭된 스타일을 적용하는 함수입니다
+    function changeCategoryClass(el) {
+        var category = document.getElementById('category'),
+            children = category.children,
+            i;
+    
+        for ( i=0; i<children.length; i++ ) {
+            children[i].className = '';
+        }
+    
+        if (el) {
+            el.className = 'on';
+        } 
+    } 
+    
+    for (var i = 0; i < positions.length; i ++) {
+    // 마커를 생성합니다
+    var marker = new kakao.maps.Marker({
+        map: map, // 마커를 표시할 지도
+        position: positions[i].latlng // 마커의 위치
+    });
+
+    // 마커에 표시할 인포윈도우를 생성합니다 
+    var infowindow = new kakao.maps.InfoWindow({
+        content: positions[i].content // 인포윈도우에 표시할 내용
+    });
+
+    // 마커에 mouseover 이벤트와 mouseout 이벤트를 등록합니다
+    // 이벤트 리스너로는 클로저를 만들어 등록합니다 
+    // for문에서 클로저를 만들어 주지 않으면 마지막 마커에만 이벤트가 등록됩니다
+    kakao.maps.event.addListener(marker, 'mouseover', makeOverListener(map, marker, infowindow));
+    kakao.maps.event.addListener(marker, 'mouseout', makeOutListener(infowindow));
+}
+
+// 인포윈도우를 표시하는 클로저를 만드는 함수입니다 
+function makeOverListener(map, marker, infowindow) {
+    return function() {
+        infowindow.open(map, marker);
+    };
+}
+
+// 인포윈도우를 닫는 클로저를 만드는 함수입니다 
+function makeOutListener(infowindow) {
+    return function() {
+        infowindow.close();
+    };
+}
+</script>
+    <!-- 이제 csv을 읽고 그 내용을 latlongdata 라는 변수에 저장했습니다. -->
+    <script>
+        var overlayOn = false, // 지도 위에 로드뷰 오버레이가 추가된 상태를 가지고 있을 변수
+            container = document.getElementById('container'), // 지도와 로드뷰를 감싸고 있는 div 입니다
+            mapWrapper = document.getElementById('mapWrapper'), // 지도를 감싸고 있는 div 입니다
+            mapContainer = document.getElementById('map'), // 지도를 표시할 div 입니다 
+            rvContainer = document.getElementById('roadview'); //로드뷰를 표시할 div 입니다
+        
+        var mapCenter = new kakao.maps.LatLng(33.45042 , 126.57091), // 지도의 중심좌표
+            mapOption = {
+                center: mapCenter, // 지도의 중심좌표
+                level: 3 // 지도의 확대 레벨
+            };
+        
+        // 지도를 표시할 div와 지도 옵션으로 지도를 생성합니다
+        var map = new kakao.maps.Map(mapContainer, mapOption);
+        
+        // 로드뷰 객체를 생성합니다 
+        var rv = new kakao.maps.Roadview(rvContainer); 
+        
+        // 좌표로부터 로드뷰 파노라마 ID를 가져올 로드뷰 클라이언트 객체를 생성합니다 
+        var rvClient = new kakao.maps.RoadviewClient(); 
+        
+        // 로드뷰에 좌표가 바뀌었을 때 발생하는 이벤트를 등록합니다 
+        kakao.maps.event.addListener(rv, 'position_changed', function() {
+        
+            // 현재 로드뷰의 위치 좌표를 얻어옵니다 
+            var rvPosition = rv.getPosition();
+        
+            // 지도의 중심을 현재 로드뷰의 위치로 설정합니다
+            map.setCenter(rvPosition);
+        
+            // 지도 위에 로드뷰 도로 오버레이가 추가된 상태이면
+            if(overlayOn) {
+                // 마커의 위치를 현재 로드뷰의 위치로 설정합니다
+                marker.setPosition(rvPosition);
+            }
+        });
+        
+        // 마커 이미지를 생성합니다
+        var markImage = new kakao.maps.MarkerImage(
+            'https://t1.daumcdn.net/localimg/localimages/07/2018/pc/roadview_minimap_wk_2018.png',
+            new kakao.maps.Size(26, 46),
+            {
+                // 스프라이트 이미지를 사용합니다.
+                // 스프라이트 이미지 전체의 크기를 지정하고
+                spriteSize: new kakao.maps.Size(1666, 168),
+                // 사용하고 싶은 영역의 좌상단 좌표를 입력합니다.
+                // background-position으로 지정하는 값이며 부호는 반대입니다.
+                spriteOrigin: new kakao.maps.Point(705, 114),
+                offset: new kakao.maps.Point(13, 46)
+            }
+        );
+        
+        // 드래그가 가능한 마커를 생성합니다
+        var marker = new kakao.maps.Marker({
+            image : markImage,
+            position: mapCenter,
+            draggable: true
+        });
+        
+        // 마커에 dragend 이벤트를 등록합니다
+        kakao.maps.event.addListener(marker, 'dragend', function(mouseEvent) {
+        
+            // // 현재 마커가 놓인 자리의 좌표입니다 
+            var position = marker.getPosition();
+        
+            // 마커가 놓인 위치를 기준으로 로드뷰를 설정합니다
+            toggleRoadview(position);
+        });
+        
+        //지도에 클릭 이벤트를 등록합니다
+        kakao.maps.event.addListener(map, 'click', function(mouseEvent){
+            
+            // 지도 위에 로드뷰 도로 오버레이가 추가된 상태가 아니면 클릭이벤트를 무시합니다 
+            if(!overlayOn) {
+                return;
+            }
+        
+            // 클릭한 위치의 좌표입니다 
+            var position = mouseEvent.latLng;
+        
+            // 마커를 클릭한 위치로 옮깁니다
+            marker.setPosition(position);
+        
+            // 클락한 위치를 기준으로 로드뷰를 설정합니다
+            toggleRoadview(position);
+        });
+        
+        // 전달받은 좌표(position)에 가까운 로드뷰의 파노라마 ID를 추출하여
+        // 로드뷰를 설정하는 함수입니다
+        function toggleRoadview(position){
+            rvClient.getNearestPanoId(position, 50, function(panoId) {
+                // 파노라마 ID가 null 이면 로드뷰를 숨깁니다
+                if (panoId === null) {
+                    toggleMapWrapper(true, position);
+                } else {
+                    toggleMapWrapper(false, position);
+        
+                    // panoId로 로드뷰를 설정합니다
+                    rv.setPanoId(panoId, position);
+                }
+            });
+        }
+        
+        // 지도를 감싸고 있는 div의 크기를 조정하는 함수입니다
+        function toggleMapWrapper(active, position) {
+            if (active) {
+        
+                // 지도를 감싸고 있는 div의 너비가 100%가 되도록 class를 변경합니다 
+                container.className = '';
+        
+                // 지도의 크기가 변경되었기 때문에 relayout 함수를 호출합니다
+                map.relayout();
+        
+                // 지도의 너비가 변경될 때 지도중심을 입력받은 위치(position)로 설정합니다
+                map.setCenter(position);
+            } else {
+        
+                // 지도만 보여지고 있는 상태이면 지도의 너비가 50%가 되도록 class를 변경하여
+                // 로드뷰가 함께 표시되게 합니다
+                if (container.className.indexOf('view_roadview') === -1) {
+                    container.className = 'view_roadview';
+        
+                    // 지도의 크기가 변경되었기 때문에 relayout 함수를 호출합니다
+                    map.relayout();
+        
+                    // 지도의 너비가 변경될 때 지도중심을 입력받은 위치(position)로 설정합니다
+                    map.setCenter(position);
+                }
+            }
+        }
+        
+        // 지도 위의 로드뷰 도로 오버레이를 추가,제거하는 함수입니다
+        function toggleOverlay(active) {
+            if (active) {
+                overlayOn = true;
+        
+                // 지도 위에 로드뷰 도로 오버레이를 추가합니다
+                map.addOverlayMapTypeId(kakao.maps.MapTypeId.ROADVIEW);
+        
+                // 지도 위에 마커를 표시합니다
+                marker.setMap(map);
+        
+                // 마커의 위치를 지도 중심으로 설정합니다 
+                marker.setPosition(map.getCenter());
+        
+                // 로드뷰의 위치를 지도 중심으로 설정합니다
+                toggleRoadview(map.getCenter());
+            } else {
+                overlayOn = false;
+        
+                // 지도 위의 로드뷰 도로 오버레이를 제거합니다
+                map.removeOverlayMapTypeId(kakao.maps.MapTypeId.ROADVIEW);
+        
+                // 지도 위의 마커를 제거합니다
+                marker.setMap(null);
+            }
+        }
+        
+        // 지도 위의 로드뷰 버튼을 눌렀을 때 호출되는 함수입니다
+        function setRoadviewRoad() {
+            var control = document.getElementById('roadviewControl');
+        
+            // 버튼이 눌린 상태가 아니면
+            if (control.className.indexOf('active') === -1) {
+                control.className = 'active';
+        
+                // 로드뷰 도로 오버레이가 보이게 합니다
+                toggleOverlay(true);
+            } else {
+                control.className = '';
+        
+                // 로드뷰 도로 오버레이를 제거합니다
+                toggleOverlay(false);
+            }
+        }
+        
+        // 로드뷰에서 X버튼을 눌렀을 때 로드뷰를 지도 뒤로 숨기는 함수입니다
+        function closeRoadview() {
+            var position = marker.getPosition();
+            toggleMapWrapper(true, position);
+        }
+    </script>
+
+    <div style="position: relative;">
+        <script>
+
+            var mapContainer = document.getElementById('map'), // 지도를 표시할 div  
+                    mapOption = {
+                         // 지도의 중심좌표 (강서구청)
+                        center: new kakao.maps.LatLng(37.550332499999996,126.84896699999999),
+                        level: 2 // 지도의 확대 레벨. 숫자가 적을수록 더 크게 확대된다.
+                    };
+
+            var map = new kakao.maps.Map(mapContainer, mapOption); // 지도를 생성합니다
+
+            var mapTypes = {
+                terrain : kakao.maps.MapTypeId.TERRAIN,    
+                traffic :  kakao.maps.MapTypeId.TRAFFIC,
+                bicycle : kakao.maps.MapTypeId.BICYCLE,
+                useDistrict : kakao.maps.MapTypeId.USE_DISTRICT
+            };
+
+            // 체크 박스를 선택하면 호출되는 함수입니다
+            function setOverlayMapTypeId() {
+                var chkTerrain = document.getElementById('chkTerrain'),  
+                    chkTraffic = document.getElementById('chkTraffic'),
+                    chkBicycle = document.getElementById('chkBicycle'),
+                    chkUseDistrict = document.getElementById('chkUseDistrict');
+                
+                // 지도 타입을 제거합니다
+                for (var type in mapTypes) {
+                    map.removeOverlayMapTypeId(mapTypes[type]);    
+                }
+
+                // 지적편집도정보 체크박스가 체크되어있으면 지도에 지적편집도정보 지도타입을 추가합니다
+                if (chkUseDistrict.checked) {
+                    map.addOverlayMapTypeId(mapTypes.useDistrict);    
+                }
+                
+                // 지형정보 체크박스가 체크되어있으면 지도에 지형정보 지도타입을 추가합니다
+                if (chkTerrain.checked) {
+                    map.addOverlayMapTypeId(mapTypes.terrain);    
+                }
+                
+                // 교통정보 체크박스가 체크되어있으면 지도에 교통정보 지도타입을 추가합니다
+                if (chkTraffic.checked) {
+                    map.addOverlayMapTypeId(mapTypes.traffic);    
+                }
+                
+                // 자전거도로정보 체크박스가 체크되어있으면 지도에 자전거도로정보 지도타입을 추가합니다
+                if (chkBicycle.checked) {
+                    map.addOverlayMapTypeId(mapTypes.bicycle);    
+                }
+                
+            }  
+            // 인포윈도우를 표시하는 클로저를 만드는 함수입니다 
+            function makeOverListener(map, marker, infowindow) {
+                return function () {
+                    infowindow.open(map, marker);
+                };
+            }
+
+            // 인포윈도우를 닫는 클로저를 만드는 함수입니다 
+            function makeOutListener(infowindow) {
+                return function () {
+                    infowindow.close();
+                };
+            }
+
+            // 지도에 마커와 인포윈도우를 표시하는 함수입니다
+            function displayMarker(locPosition, message) {
+
+                var iwContent = message, // 인포윈도우에 표시할 내용
+                    iwRemoveable = true;
+
+                // 인포윈도우를 생성합니다
+                var infowindow = new kakao.maps.InfoWindow({
+                    content: iwContent,
+                    removable: iwRemoveable
+                });
+
+                // 인포윈도우를 마커위에 표시합니다 
+                infowindow.open(map, marker)
+            }
+
+            var drawingFlag = false; // 원이 그려지고 있는 상태를 가지고 있을 변수입니다
+            var centerPosition; // 원의 중심좌표 입니다
+            var drawingCircle; // 그려지고 있는 원을 표시할 원 객체입니다
+            var drawingLine; // 그려지고 있는 원의 반지름을 표시할 선 객체입니다
+            var drawingOverlay; // 그려지고 있는 원의 반경을 표시할 커스텀오버레이 입니다
+            var drawingDot; // 그려지고 있는 원의 중심점을 표시할 커스텀오버레이 입니다
+
+            var lastKnownCenterPosition;
+            var cctvMarkers = [];
+            var gs25Markers = [];
+
+            var circles = []; // 클릭으로 그려진 원과 반경 정보를 표시하는 선과 커스텀오버레이를 가지고 있을 배열입니다
+            // 지도에 클릭 이벤트를 등록합니다
+
+            // 지도를 클릭한 위치에 표출할 마커입니다
+            var marker_click = new kakao.maps.Marker({ 
+                // 지도 중심좌표에 마커를 생성합니다 
+                position: map.getCenter(), 
+                clickable: true
+            }); 
+
+            // 아래 코드는 위의 마커를 생성하는 코드에서 clickable: true 와 같이
+            // 마커를 클릭했을 때 지도의 클릭 이벤트가 발생하지 않도록 설정합니다
+            // marker_click.setClickable(true);
+
+            // 마커를 지도에 표시합니다.
+            marker_click.setMap(map);
+
+            // 마커를 클릭했을 때 마커 위에 표시할 인포윈도우를 생성합니다
+            // 인포윈도우에 표출될 내용으로 HTML 문자열이나 document element가 가능합니다
+            var iwContent = '<div class="propose"><a href="https://www.gangseo.seoul.kr/gs0202022?curPage=1" target="_blank"><h3>제안게시판 이동</h3></div>', 
+                iwRemoveable = true; // removeable 속성을 ture 로 설정하면 인포윈도우를 닫을 수 있는 x버튼이 표시됩니다
+                
+           
+            // 인포윈도우를 생성합니다
+            var infowindow = new kakao.maps.InfoWindow({
+                content : iwContent,
+                removable : iwRemoveable
+            });
+
+            // 마커에 클릭이벤트를 등록합니다
+            kakao.maps.event.addListener(marker_click, 'click', function() {
+                // 마커 위에 인포윈도우를 표시합니다
+                infowindow.open(map, marker_click);  
+                kakao.maps.event.addListener(marker_click, 'click', makeOutListener(infowindow_star));
+            });
+
+
+            // 지도에 클릭 이벤트를 등록합니다
+            // 지도를 클릭하면 마지막 파라미터로 넘어온 함수를 호출합니다
+            kakao.maps.event.addListener(map, 'click', function(mouseEvent) {        
+                
+                // 클릭한 위도, 경도 정보를 가져옵니다 
+                var latlng = mouseEvent.latLng; 
+                
+                var message = '클릭(마커)의 위치 : 위도, 경도 ( ' + latlng.getLat() + ',';
+                message += latlng.getLng() + ' )';
+                
+                var resultDiv = document.getElementById('clickLatlng'); 
+                resultDiv.innerHTML = message;
+                
+            });
+            
+
+            kakao.maps.event.addListener(map, 'click', function (mouseEvent) {
+
+                // 클릭한 위도, 경도 정보를 가져옵니다 
+                var latlng = mouseEvent.latLng; 
+                
+                // 마커 위치를 클릭한 위치로 옮깁니다
+                marker_click.setPosition(latlng);
+        
+                var resultDiv = document.getElementById('clickLatlng'); 
+                
+                // 클릭 이벤트가 발생했을 때 원을 그리고 있는 상태가 아니면 중심좌표를 클릭한 지점으로 설정합니다
+                if (!drawingFlag) {
+
+                    // 상태를 그리고있는 상태로 변경합니다
+                    drawingFlag = true;
+
+                    // 원이 그려질 중심좌표를 클릭한 위치로 설정합니다 
+                    centerPosition = mouseEvent.latLng;
+                    lastKnownCenterPosition = mouseEvent.latLng;
+
+                    // 그려지고 있는 원의 반경을 표시할 선 객체를 생성합니다
+                    if (!drawingLine) {
+                        drawingLine = new kakao.maps.Polyline({
+                            strokeWeight: 3, // 선의 두께입니다
+                            strokeColor: '#00a0e9', // 선의 색깔입니다
+                            strokeOpacity: 1, // 선의 불투명도입니다 0에서 1 사이값이며 0에 가까울수록 투명합니다
+                            strokeStyle: 'solid' // 선의 스타일입니다
+                        });
+                    }
+
+                    // 그려지고 있는 원을 표시할 원 객체를 생성합니다
+                    if (!drawingCircle) {
+                        drawingCircle = new kakao.maps.Circle({
+                            strokeWeight: 1, // 선의 두께입니다
+                            strokeColor: '#00a0e9', // 선의 색깔입니다
+                            strokeOpacity: 0.1, // 선의 불투명도입니다 0에서 1 사이값이며 0에 가까울수록 투명합니다
+                            strokeStyle: 'solid', // 선의 스타일입니다
+                            fillColor: '#00a0e9', // 채우기 색깔입니다
+                            fillOpacity: 0.2 // 채우기 불투명도입니다 
+                        });
+                    }
+
+                    // 그려지고 있는 원의 반경 정보를 표시할 커스텀오버레이를 생성합니다
+                    if (!drawingOverlay) {
+                        drawingOverlay = new kakao.maps.CustomOverlay({
+                            xAnchor: 0,
+                            yAnchor: 0,
+                            zIndex: 1
+                        });
+                    }
+                }
+            });
+
+            // 지도에 마우스무브 이벤트를 등록합니다
+            // 원을 그리고있는 상태에서 마우스무브 이벤트가 발생하면 그려질 원의 위치와 반경정보를 동적으로 보여주도록 합니다
+            kakao.maps.event.addListener(map, 'mousemove', function (mouseEvent) {
+
+                // 마우스무브 이벤트가 발생했을 때 원을 그리고있는 상태이면
+                if (drawingFlag) {
+
+                    // 마우스 커서의 현재 위치를 얻어옵니다 
+                    var mousePosition = mouseEvent.latLng;
+
+                    // 그려지고 있는 선을 표시할 좌표 배열입니다. 클릭한 중심좌표와 마우스커서의 위치로 설정합니다
+                    var linePath = [centerPosition, mousePosition];
+
+                    // 그려지고 있는 선을 표시할 선 객체에 좌표 배열을 설정합니다
+                    drawingLine.setPath(linePath);
+
+                    // 원의 반지름을 선 객체를 이용해서 얻어옵니다 
+                    var length = drawingLine.getLength();
+
+                    if (length > 0) {
+
+                        // 그려지고 있는 원의 중심좌표와 반지름입니다
+                        var circleOptions = {
+                            center: centerPosition,
+                            radius: length,
+                        };
+
+                        // 그려지고 있는 원의 옵션을 설정합니다
+                        drawingCircle.setOptions(circleOptions);
+
+                        // 반경 정보를 표시할 커스텀오버레이의 내용입니다
+                        var radius = Math.round(drawingCircle.getRadius()),
+                            content = '<div class="info">반경 <span class="number">' + radius + '</span>m</div>';
+
+                        // 반경 정보를 표시할 커스텀 오버레이의 좌표를 마우스커서 위치로 설정합니다
+                        drawingOverlay.setPosition(mousePosition);
+
+                        // 반경 정보를 표시할 커스텀 오버레이의 표시할 내용을 설정합니다
+                        drawingOverlay.setContent(content);
+
+                        // 그려지고 있는 원을 지도에 표시합니다
+                        drawingCircle.setMap(map);
+
+                        // 그려지고 있는 선을 지도에 표시합니다
+                        drawingLine.setMap(map);
+
+                        // 그려지고 있는 원의 반경정보 커스텀 오버레이를 지도에 표시합니다
+                        drawingOverlay.setMap(map);
+
+                    } else {
+
+                        drawingCircle.setMap(null);
+                        drawingLine.setMap(null);
+                        drawingOverlay.setMap(null);
+
+                    }
+                }
+            });
+
+            // 지도에 마우스 오른쪽 클릭이벤트를 등록합니다
+            // 원을 그리고있는 상태에서 마우스 오른쪽 클릭 이벤트가 발생하면
+            // 마우스 오른쪽 클릭한 위치를 기준으로 
+            // 원과 원의 반경정보를 표시하는 선과 커스텀 오버레이를 표시하고 그리기를 종료합니다
+            // 그리고 마지막으로 원의 반경내 위치한 cctv를 지도에 표시해 줍니다.
+            kakao.maps.event.addListener(map, 'rightclick', function (mouseEvent) {
+
+                if (drawingFlag) {
+
+                    // 마우스로 오른쪽 클릭한 위치입니다 
+                    var rClickPosition = mouseEvent.latLng;
+                    var kakaoLatLongDataForm = rClickPosition
+
+                    // 원의 반경을 표시할 선 객체를 생성합니다
+                    var polyline = new kakao.maps.Polyline({
+                        path: [centerPosition, rClickPosition], // 선을 구성하는 좌표 배열입니다. 원의 중심좌표와 클릭한 위치로 설정합니다
+                        strokeWeight: 3, // 선의 두께 입니다
+                        strokeColor: '#00a0e9', // 선의 색깔입니다
+                        strokeOpacity: 1, // 선의 불투명도입니다 0에서 1 사이값이며 0에 가까울수록 투명합니다
+                        strokeStyle: 'solid' // 선의 스타일입니다
+                    });
+
+                    // 원 객체를 생성합니다
+                    var circle = new kakao.maps.Circle({
+                        center: centerPosition, // 원의 중심좌표입니다
+                        radius: polyline.getLength(), // 원의 반지름입니다 m 단위 이며 선 객체를 이용해서 얻어옵니다
+                        strokeWeight: 1, // 선의 두께입니다
+                        strokeColor: '#00a0e9', // 선의 색깔입니다
+                        strokeOpacity: 0.1, // 선의 불투명도입니다 0에서 1 사이값이며 0에 가까울수록 투명합니다
+                        strokeStyle: 'solid', // 선의 스타일입니다
+                        fillColor: '#00a0e9', // 채우기 색깔입니다
+                        fillOpacity: 0.2  // 채우기 불투명도입니다 
+                    });
+
+                    var radius = Math.round(circle.getRadius()), // 원의 반경 정보를 얻어옵니다
+                        content = getTimeHTML(radius); // 커스텀 오버레이에 표시할 반경 정보입니다
+
+
+                    // 반경정보를 표시할 커스텀 오버레이를 생성합니다
+                    var radiusOverlay = new kakao.maps.CustomOverlay({
+                        content: content, // 표시할 내용입니다
+                        position: rClickPosition, // 표시할 위치입니다. 클릭한 위치로 설정합니다
+                        xAnchor: 0,
+                        yAnchor: 0,
+                        zIndex: 1
+                    });
+
+                    // 원을 지도에 표시합니다
+                    circle.setMap(map);
+
+                    // 선을 지도에 표시합니다
+                    polyline.setMap(map);
+
+                    // 반경 정보 커스텀 오버레이를 지도에 표시합니다
+                    radiusOverlay.setMap(map);
+
+                    // 배열에 담을 객체입니다. 원, 선, 커스텀오버레이 객체를 가지고 있습니다
+                    var radiusObj = {
+                        'polyline': polyline,
+                        'circle': circle,
+                        'overlay': radiusOverlay
+                    };
+
+                    // 배열에 추가합니다
+                    // 이 배열을 이용해서 "모두 지우기" 버튼을 클릭했을 때 지도에 그려진 원, 선, 커스텀오버레이들을 지웁니다
+                    circles.push(radiusObj);
+
+                    // 그리기 상태를 그리고 있지 않는 상태로 바꿉니다
+                    drawingFlag = false;
+
+                    // 중심 좌표를 초기화 합니다  
+                    centerPosition = null;
+
+                    // 그려지고 있는 원, 선, 커스텀오버레이를 지도에서 제거합니다
+                    drawingCircle.setMap(null);
+                    drawingLine.setMap(null);
+                    drawingOverlay.setMap(null);
+
+
+                    // 마커이미지를 지정하는 방법들
+
+                    // 방법1) url 지정
+                    // var imageSrc = "https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/markerStar.png";
+
+                    // 방법2-1) 파일 상대경로 지정 (카카오맵 기본 별마커)
+                    // var imageSrc = "./img/markerStar.png";
+
+                    // 방법2-1) 파일 상대경로 지정 (커스텀)
+                    // (마커아이콘 파일경로 지정. 24x35pixel 누끼딴 png 파일 권장)
+                    var imageSrc = "./img/cctvPinIconMini.png";
+                    var imageStore = "./img/"
+
+                    // 마커 이미지의 이미지 크기 입니다
+                    var imageSize = new kakao.maps.Size(24, 35);
+
+                    // 마커 이미지를 생성합니다    
+                    var markerImage = new kakao.maps.MarkerImage(imageSrc, imageSize);
+
+                    // csv의 데이터 갯수만큼 반복합니다.
+                    for (var i = 0; i < latlongdata.length; i++) {
+                        // 매 반복문이 돌때마다 csv파일내 각행의 경위도 좌표와 제목을
+                        // 카카오에서 요구한데로 맞춰서 셋팅해줍니다.
+
+                        // 그리고 지도상 원의 중심을 기준으로,
+                        // 반경내 위치한 경위도 좌표인지 검사해줍니다.
+                        // 원의 반경내 위치한 좌표가 아니면 continue로 띄어넘고 다음 작업을 수행합니다.
+                        // kakaoLatLongDataForm
+                        //qa {La: 126.96997824751595, Ma: 37.46289152483573}
+                        //La: 126.96997824751595
+                        //Ma: 37.46289152483573
+                        var comparisonPosition = kakaoLatLongDataForm;
+                        comparisonPosition.La = latlongdata[i].long;
+                        comparisonPosition.Ma = latlongdata[i].lat;
+                    }
+
+                        var temp_Polyline = new kakao.maps.Polyline({
+                            path: [lastKnownCenterPosition, comparisonPosition], // 선을 구성하는 좌표 배열입니다. 원의 중심좌표와 클릭한 위치로 설정합니다
+                        });
+
+                       for (var i = 0; i < latlongdata.length; i++) {
+                       
+                        var comparisonPosition = kakaoLatLongDataForm;
+                        comparisonPosition.La = latlongdata[i].long;
+                        comparisonPosition.Ma = latlongdata[i].lat;
+
+                        var temp_Polyline = new kakao.maps.Polyline({
+                            path: [lastKnownCenterPosition, comparisonPosition], // 선을 구성하는 좌표 배열입니다. 원의 중심좌표와 클릭한 위치로 설정합니다
+                        });
+
+                        // 원 객체를 생성합니다
+                        var temp_circle = new kakao.maps.Circle({
+                            center: lastKnownCenterPosition, // 원의 중심좌표입니다
+                            radius: temp_Polyline.getLength(), // 원의 반지름입니다 m 단위 이며 선 객체를 이용해서 얻어옵니다
+                        });
+
+                        var temp_radius = Math.round(temp_circle.getRadius()); // 원의 반경 정보를 얻어옵니다
+
+                        // 반경내 포함되면 마커를 등록하고 표시해줍니다
+                        if (temp_radius <= radius) {
+                            var latlongPosition = {
+                                title: latlongdata[i].adress,
+                                latlng: new kakao.maps.LatLng(latlongdata[i].lat, latlongdata[i].long)
+                            };
+
+                            // 마커를 생성합니다
+                            var marker = new kakao.maps.Marker({
+                                map: map, // 마커를 표시할 지도
+                                position: latlongPosition.latlng, // 마커를 표시할 위치.
+                                title: latlongPosition.title, // 마커의 타이틀, 마커에 마우스를 올리면 타이틀이 표시됩니다
+                                image: markerImage // 마커 이미지 
+                            });
+
+                            cctvMarkers.push(marker)
+
+                            // 마커에 표시할 인포윈도우를 생성합니다 
+                            var infowindow = new kakao.maps.InfoWindow({
+                                content: latlongPosition.title // 인포윈도우에 표시할 내용
+                            });
+
+                            // 마커에 mouseover 이벤트와 mouseout 이벤트를 등록합니다
+                            // 이벤트 리스너로는 클로저를 만들어 등록합니다 
+                            // for문에서 클로저를 만들어 주지 않으면 마지막 마커에만 이벤트가 등록됩니다
+                            kakao.maps.event.addListener(marker, 'mouseover', makeOverListener(map, marker, infowindow));
+                            kakao.maps.event.addListener(marker, 'mouseout', makeOutListener(infowindow));
+
+                        } else {
+                            continue
+                        }
+                    }
+                }
+            });
+
+
+            // 지도에 표시되어 있는 모든 원과 반경정보를 표시하는 선, 커스텀 오버레이를 지도에서 제거합니다
+            function removeCircles() {
+                for (var i = 0; i < circles.length; i++) {
+                    circles[i].circle.setMap(null);
+                    circles[i].polyline.setMap(null);
+                    circles[i].overlay.setMap(null);
+                }
+                circles = [];
+
+                // 맵 초기화
+                // 이벤트 다시 등록해줘야 함 이런방식으로 하면. 보류
+                // map = new kakao.maps.Map(mapContainer, mapOption);
+            }
+
+            // 마우스 우클릭 하여 원 그리기가 종료됐을 때 호출하여 
+            // 그려진 원의 반경 정보을 계산하여
+            // HTML Content를 만들어 리턴하는 함수입니다
+            function getTimeHTML(distance) {
+
+                // 거리와 도보 시간, 자전거 시간을 가지고 HTML Content를 만들어 리턴합니다
+                var content = '<ul class="info">';
+                content += '    <li>';
+                content += '        <span class="label">반경</span><span class="number">' + distance + '</span>m';
+                content += '    </li>';
+                content += '</ul>'
+
+                return content;
+            }
+
+            var cctvFlag = 1
+            function setCctvMarkers(map) {
+                for (var i = 0; i < cctvMarkers.length; i++) {
+                    cctvMarkers[i].setMap(map);
+                }
+            }
+            function cctvButtonClick() {
+                // 0은 꺼짐. 1은 켜짐
+                // 상태다값이 바뀌면서 스위치가 on off 되는지 식별한다.
+                // 방마 있는 전등스위치랑 같은 원리
+                if (cctvFlag == 0) {
+                    cctvFlag = 1
+                    setCctvMarkers(map)
+                } else {
+                    cctvFlag = 0
+                    setCctvMarkers(null)
+                }
+                console.log("cctvFlag:", cctvFlag)
+            }
+
+            var gs25Flag = 1
+            function setGs25Markers(map) {
+                //setCctvMarkers 함수 참고하셔서 코딩하시면 됩니다
+                for (var i = 0; i < gs25markers.length; i++) {
+                    gs25markers[i].setMap(map)
+                }
+            }
+
+            function gs25ButtonClick() {
+                // 0은 꺼짐. 1은 켜짐
+                // 상태값이 바뀌면서 스위치가 on off 되는지 식별한다.
+                // 방마다 있는 전등스위치랑 같은 원리
+                if (gs25Flag == 0) {
+                    gs25Flag = 1
+                    setGs25Markers(map)
+                } else {
+                    gs25Flag = 0
+                    setGs25Markers(null)
+                }
+                console.log("gs25Flag:", gs25Flag)
+            }
+
+            var positions = [
+                {
+                    content: '<a href="https://www.gangseo.seoul.kr/gs0202022/view?sgstSn=pOp%5eDSRmZR84RNOQvS%5eCOQ%3d%3d&curPage=&srchKey=&srchText=&srchBeginDt=&srchEndDt=" target="_blank"><div class="minwon"><h4>블록거울 교체요청</h4></div></a>', 
+                    latlng: new kakao.maps.LatLng(37.5551476,126.8565132)
+                },
+                {
+                    content: '<a href="https://www.gangseo.seoul.kr/gs0202022/view?sgstSn=oaWUfWrqnBl0Lc5uN4lv5w%3d%3d&curPage=&srchKey=&srchText=&srchBeginDt=&srchEndDt=" target="_blank"><div class="minwon"><h5>보타닉공원 자전거도로</h5></div></a>', 
+                    latlng: new kakao.maps.LatLng(37.56640867731903,126.82996125798878)
+                },
+                {
+                    content: '<a href="https://www.gangseo.seoul.kr/gs0202022/https://www.gangseo.seoul.kr/gs0202022/view?sgstSn=HNWxpURiSsMeUY6*TV2gtw%3d%3d&curPage=&srchKey=sj&srchText=%ea%b0%80%ec%96%91%ec%97%ad&srchBeginDt=&srchEndDt=" target="_blank"><div class="minwon"><h4>전봇대 후사경 설치</h4></div></a>', 
+                    latlng: new kakao.maps.LatLng(37.5422079,126.8319372)
+                },
+                {
+                    content: '<a href="https://www.gangseo.seoul.kr/gs0202022/view?sgstSn=oV1n9pRlJwi*dcxWQaZsnw%3d%3d&curPage=&srchKey=&srchText=&srchBeginDt=&srchEndDt=" target="_blank"><div class="minwon"><h4>전기차 충전소 설치</h4></div></a>', 
+                    latlng: new kakao.maps.LatLng(37.5791659,126.8142743)
+                },
+                {
+                    content: '<a href="https://www.gangseo.seoul.kr/gs0202022/view?sgstSn=mhLNrmJriYf4DIu4wqN3YA%3d%3d&curPage=1&srchKey=&srchText=&srchBeginDt=&srchEndDt==" target="_blank"><div class="minwon"><h4>아이스팩 수거함 설치</h4></div></a>', 
+                    latlng: new kakao.maps.LatLng(37.55089023566004,126.84914348507496)
+                },    
+                {
+                    content: '<a href="https://eminwon.gangseo.seoul.kr/emwp/gov/mogaha/ntis/web/emwp/cns/action/EmwpCnslWebAction.do" target="_blank"><div class="minwon"><h4>주차구획선</h4></div></a>', 
+                    latlng: new kakao.maps.LatLng(37.5353141,126.8488164)
+                },
+                {
+                    content: '<a href="https://eminwon.gangseo.seoul.kr/emwp/gov/mogaha/ntis/web/emwp/cns/action/EmwpCnslWebAction.do" target="_blank"><div class="minwon"><h4>방화동청소년공부방</h4></div></a>', 
+                    latlng: new kakao.maps.LatLng(37.5679976,126.8079649)
+                },
+            ];
+
+            // 마커 이미지의 이미지 주소입니다
+            var imageSrc_star = "./img/voice_icon.png"; 
+                
+                for (var i = 0; i < positions.length; i ++) {
+                    
+                    // 마커 이미지의 이미지 크기 입니다
+                    var imageSize_star = new kakao.maps.Size(24, 35); 
+                    
+                    // 마커 이미지를 생성합니다    
+                    var markerImage_star = new kakao.maps.MarkerImage(imageSrc_star, imageSize_star); 
+                    
+                    // 마커를 생성합니다
+                    var marker_star = new kakao.maps.Marker({
+                        map: map, // 마커를 표시할 지도
+                        position: positions[i].latlng, // 마커를 표시할 위치
+                        title : positions[i].title, // 마커의 타이틀, 마커에 마우스를 올리면 타이틀이 표시됩니다
+                        image : markerImage_star // 마커 이미지 
+                    });
+                // 마커에 표시할 인포윈도우를 생성합니다 
+                var infowindow_star = new kakao.maps.InfoWindow({
+                    content: positions[i].content // 인포윈도우에 표시할 내용
+                });
+
+                // 마커에 mouseover 이벤트와 mouseout 이벤트를 등록합니다
+                // 이벤트 리스너로는 클로저를 만들어 등록합니다 
+                // for문에서 클로저를 만들어 주지 않으면 마지막 마커에만 이벤트가 등록됩니다
+                kakao.maps.event.addListener(marker_star, 'mouseover', makeOverListener(map, marker_star, infowindow_star));
+                kakao.maps.event.addListener(marker_star, 'click', makeOutListener(infowindow_star));
+            }    
+
+            // 인포윈도우를 표시하는 클로저를 만드는 함수입니다 
+            function makeOverListener(map, marker_star, infowindow_star) {
+                return function() {
+                    infowindow_star.open(map, marker_star);
+                };
+            }
+
+            // 인포윈도우를 닫는 클로저를 만드는 함수입니다 
+            function makeOutListener(infowindow_star) {
+                return function() {
+                    infowindow_star.close();
+                };
+            }
+
+            var locations = [
+                {
+                    content: '<a href="https://www.epeople.go.kr/api/thk/conversational/selectConversationalDetail.npaid?ideaRegNo=1AE-2108-0000719" target="_blank"><div class="minwon"><h4>장바구니 무료대여</h4></div></a>', 
+                    latlng: new kakao.maps.LatLng(37.55113230058484,126.84820371331566)
+                },
+            ];
+
+            // 마커 이미지의 이미지 주소입니다
+            var imageSrc_notice = "https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/markerStar.png"; 
+                
+                for (var i = 0; i < locations.length; i ++) {
+                    
+                    // 마커 이미지의 이미지 크기 입니다
+                    var imageSize_notice = new kakao.maps.Size(24, 35); 
+                    
+                    // 마커 이미지를 생성합니다    
+                    var markerImage_notice = new kakao.maps.MarkerImage(imageSrc_notice, imageSize_notice); 
+                    
+                    // 마커를 생성합니다
+                    var marker_notice = new kakao.maps.Marker({
+                        map: map, // 마커를 표시할 지도
+                        position: locations[i].latlng, // 마커를 표시할 위치
+                        title : locations[i].title, // 마커의 타이틀, 마커에 마우스를 올리면 타이틀이 표시됩니다
+                        image : markerImage_notice // 마커 이미지 
+                    });
+                // 마커에 표시할 인포윈도우를 생성합니다 
+                var infowindow_notice = new kakao.maps.InfoWindow({
+                    content: locations[i].content // 인포윈도우에 표시할 내용
+                });
+
+                // 마커에 mouseover 이벤트와 mouseout 이벤트를 등록합니다
+                // 이벤트 리스너로는 클로저를 만들어 등록합니다 
+                // for문에서 클로저를 만들어 주지 않으면 마지막 마커에만 이벤트가 등록됩니다
+                kakao.maps.event.addListener(marker_notice, 'mouseover', makeOverListener(map, marker_notice, infowindow_notice));
+                kakao.maps.event.addListener(marker_notice, 'click', makeOutListener(infowindow_notice));
+            }    
+
+            // 인포윈도우를 표시하는 클로저를 만드는 함수입니다 
+            function makeOverListener(map, marker_notice, infowindow_notice) {
+                return function() {
+                    infowindow_notice.open(map, marker_notice);
+                };
+            }
+
+            // 인포윈도우를 닫는 클로저를 만드는 함수입니다 
+            function makeOutListener(infowindow_notice) {
+                return function() {
+                    infowindow_notice.close();
+                };
+            }    
+
+            var voices = [
+                {
+                    content: '<a href="https://www.gangseo.seoul.kr/gs020209/279868?srchCtgry=&curPage=&srchKey=&srchText=&srchBeginDt=&srchEndDt=" target="_blank"><div class="minwon"><h4>긴급돌봄팀 칭찬</h4></div></a>', 
+                    latlng: new kakao.maps.LatLng(37.55098618008356,126.850195740258)
+                },
+            ];
+
+            // 마커 이미지의 이미지 주소입니다
+            var imageSrc_thumb = "./img/favorite_icon.png"; 
+                
+                for (var i = 0; i < voices.length; i ++) {
+                    
+                    // 마커 이미지의 이미지 크기 입니다
+                    var imageSize_thumb = new kakao.maps.Size(24, 35); 
+                    
+                    // 마커 이미지를 생성합니다    
+                    var markerImage_thumb = new kakao.maps.MarkerImage(imageSrc_thumb, imageSize_thumb); 
+                    
+                    // 마커를 생성합니다
+                    var marker_thumb = new kakao.maps.Marker({
+                        map: map, // 마커를 표시할 지도
+                        position: voices[i].latlng, // 마커를 표시할 위치
+                        title : voices[i].title, // 마커의 타이틀, 마커에 마우스를 올리면 타이틀이 표시됩니다
+                        image : markerImage_thumb // 마커 이미지 
+                    });
+                // 마커에 표시할 인포윈도우를 생성합니다 
+                var infowindow_thumb = new kakao.maps.InfoWindow({
+                    content: voices[i].content // 인포윈도우에 표시할 내용
+                });
+
+                // 마커에 mouseover 이벤트와 mouseout 이벤트를 등록합니다
+                // 이벤트 리스너로는 클로저를 만들어 등록합니다 
+                // for문에서 클로저를 만들어 주지 않으면 마지막 마커에만 이벤트가 등록됩니다
+                kakao.maps.event.addListener(marker_thumb, 'mouseover', makeOverListener(map, marker_thumb, infowindow_thumb));
+                kakao.maps.event.addListener(marker_thumb, 'click', makeOutListener(infowindow_thumb));
+            }    
+
+            // 인포윈도우를 표시하는 클로저를 만드는 함수입니다 
+            function makeOverListener(map, marker_thumb, infowindow_thumb) {
+                return function() {
+                    infowindow_thumb.open(map, marker_thumb);
+                };
+            }
+
+            // 인포윈도우를 닫는 클로저를 만드는 함수입니다 
+            function makeOutListener(infowindow_thumb) {
+                return function() {
+                    infowindow_thumb.close();
+                };
+            }    
+
+            var voices = [
+                {
+                    content: '<a href="https://www.gangseo.seoul.kr/mypage/appdetails" target="_blank"><div class="minwon"><h4>공원 뒷편 CCTV 설치요청</h4></div></a>', 
+                    latlng: new kakao.maps.LatLng(37.5495157038784,126.8487445221458)
+                },
+            ];
+
+            // 마커 이미지의 이미지 주소입니다
+            var imageSrc_voice = "./img/my.png"; 
+                
+                for (var i = 0; i < voices.length; i ++) {
+                    
+                    // 마커 이미지의 이미지 크기 입니다
+                    var imageSize_voice = new kakao.maps.Size(24, 35); 
+                    
+                    // 마커 이미지를 생성합니다    
+                    var markerImage_voice = new kakao.maps.MarkerImage(imageSrc_voice, imageSize_voice); 
+                    
+                    // 마커를 생성합니다
+                    var marker_voice = new kakao.maps.Marker({
+                        map: map, // 마커를 표시할 지도
+                        position: voices[i].latlng, // 마커를 표시할 위치
+                        title : voices[i].title, // 마커의 타이틀, 마커에 마우스를 올리면 타이틀이 표시됩니다
+                        image : markerImage_voice // 마커 이미지 
+                    });
+                // 마커에 표시할 인포윈도우를 생성합니다 
+                var infowindow_voice = new kakao.maps.InfoWindow({
+                    content: voices[i].content // 인포윈도우에 표시할 내용
+                });
+
+                // 마커에 mouseover 이벤트와 mouseout 이벤트를 등록합니다
+                // 이벤트 리스너로는 클로저를 만들어 등록합니다 
+                // for문에서 클로저를 만들어 주지 않으면 마지막 마커에만 이벤트가 등록됩니다
+                kakao.maps.event.addListener(marker_voice, 'mouseover', makeOverListener(map, marker_voice, infowindow_voice));
+                kakao.maps.event.addListener(marker_voice, 'click', makeOutListener(infowindow_voice));
+            }    
+
+            // 인포윈도우를 표시하는 클로저를 만드는 함수입니다 
+            function makeOverListener(map, marker_voice, infowindow_voice) {
+                return function() {
+                    infowindow_voice.open(map, marker_voice);
+                };
+            }
+
+            // 인포윈도우를 닫는 클로저를 만드는 함수입니다 
+            function makeOutListener(infowindow_voice) {
+                return function() {
+                    infowindow_voice.close();
+                };
+            }    
+
+
+        </script>
+
+    </div>
+
+    <h3 class="info_text">
+        지정범위 내 정보표시 : 👨‍🏫 궁금한 위치 마우스 클릭 → 👩‍🏫 원하는 지점 이동 후 마우스 우클릭</h3>
+    <h3 class="info_text">
+        🔎 로드뷰 - 우측 상단 클릭 | 🤔 마커지우기 : 새로고침(F5) | 🔊 마커 위 커서대고 클릭 (제안게시판 이동)
+    </h3>
+  
+</body>
+
+</html> 
